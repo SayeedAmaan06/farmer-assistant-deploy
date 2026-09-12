@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomato Leaf Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ebeee6;
+    --card:  #f6f7f2;
+    --ink:   #17261c;
+    --olive: #5c6b4a;
+    --tomato:#b83a24;
+    --leaf:  #2f6b42;
+    --line:  #cdd3c2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 40px 20px 72px; }
+
+  h1 {
+    font-family: Fraunces, Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 7vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+  }
+  .lede { color: var(--olive); margin: 0 0 28px; max-width: 46ch; }
+
+  /* the photo is the hero */
+  .drop {
+    display: block;
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    padding: 34px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop:focus-within { border-color: var(--olive); }
+  .drop.filled { border-style: solid; padding: 10px; }
+  .drop input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .drop-title { font-weight: 600; display: block; }
+  .drop-sub { color: var(--olive); font-size: .9rem; }
+  #preview { display: none; width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; }
+  .drop.filled #preview { display: block; }
+  .drop.filled .drop-copy { display: none; }
+  .swap { display: none; font-size: .85rem; color: var(--olive); padding-top: 8px; }
+  .drop.filled .swap { display: block; }
+
+  label.q { display: block; font-weight: 600; margin: 26px 0 8px; }
+  textarea {
+    width: 100%; min-height: 88px; resize: vertical;
+    padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); color: inherit;
+    font: inherit;
+  }
+  textarea:focus, .drop:focus-within { outline: 2px solid var(--olive); outline-offset: 2px; }
+
+  button {
+    margin-top: 14px; width: 100%;
+    padding: 14px 18px;
+    border: 0; border-radius: 10px;
+    background: var(--ink); color: var(--paper);
+    font: inherit; font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #223529; }
+  button:disabled { background: var(--olive); cursor: progress; }
+
+  .answer { margin-top: 30px; display: none; }
+  .answer.on { display: block; }
+  .trace {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    font-size: .82rem; color: var(--olive); margin-bottom: 12px;
+  }
+  .trace span { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+  .verdict {
+    font-family: Fraunces, Georgia, serif; font-weight: 700;
+    font-size: 1.3rem; margin: 0 0 10px;
+  }
+  .verdict.sick { color: var(--tomato); }
+  .verdict.well { color: var(--leaf); }
+  .body { white-space: pre-wrap; }
+  .body strong { font-weight: 600; }
+  .err { color: var(--tomato); }
+
+  .foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+          font-size: .85rem; color: var(--olive); }
+  .foot a { color: var(--olive); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Tomato leaf clinic</h1>
+  <p class="lede">Photograph a leaf. A trained model names the disease, and the answer comes from the state tomato guide, not from memory.</p>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="image/*" capture="environment">
+    <img id="preview" alt="The leaf you selected">
+    <span class="drop-copy">
+      <span class="drop-title">Take or choose a photo of the leaf</span>
+      <span class="drop-sub">One leaf, filling most of the frame</span>
+    </span>
+    <span class="swap">Tap to use a different photo</span>
+  </label>
+
+  <label class="q" for="question">What do you want to know?</label>
+  <textarea id="question">What is wrong with this plant and what should I spray?</textarea>
+
+  <button id="go">Diagnose</button>
+
+  <section class="answer" id="answer" aria-live="polite">
+    <div class="trace" id="trace"></div>
+    <p class="verdict" id="verdict"></p>
+    <div class="body" id="body"></div>
+  </section>
+
+  <p class="foot">Built with a MobileNetV2 classifier, a FAISS vector search over the treatment guide, and a LangChain agent that chooses between them. Confirm any spray schedule with your local agriculture officer. <a href="/docs">API docs</a></p>
+</div>
+
+<script>
+const drop = document.getElementById('drop');
+const file = document.getElementById('file');
+const preview = document.getElementById('preview');
+const go = document.getElementById('go');
+const panel = document.getElementById('answer');
+const trace = document.getElementById('trace');
+const verdict = document.getElementById('verdict');
+const body = document.getElementById('body');
+
+const TOOL_LABELS = {
+  detect_plant_disease: 'Looked at the photo',
+  search_treatment_guide: 'Searched the guide'
+};
+
+file.addEventListener('change', () => {
+  const f = file.files[0];
+  if (!f) return;
+  preview.src = URL.createObjectURL(f);
+  drop.classList.add('filled');
+});
+
+go.addEventListener('click', async () => {
+  const question = document.getElementById('question').value.trim();
+  if (!question) { show('Type a question first.', true); return; }
+
+  const form = new FormData();
+  form.append('question', question);
+  if (file.files[0]) form.append('image', file.files[0]);
+
+  go.disabled = true;
+  go.textContent = 'Reading the leaf…';
+  panel.classList.remove('on');
+
+  try {
+    const res = await fetch('/ask', { method: 'POST', body: form });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    show(data.answer, false, data.tools_used);
+  } catch (e) {
+    show('The server could not answer: ' + e.message, true);
+  } finally {
+    go.disabled = false;
+    go.textContent = 'Diagnose';
+  }
+});
+
+function show(text, isError, tools) {
+  trace.innerHTML = '';
+  (tools || []).forEach(t => {
+    const chip = document.createElement('span');
+    chip.textContent = TOOL_LABELS[t] || t;
+    trace.appendChild(chip);
+  });
+
+  const healthy = /healthy/i.test(text) && !/blight|spot/i.test(text.slice(0, 160));
+  verdict.textContent = isError ? '' : (healthy ? 'This plant looks healthy' : 'Here is what the guide says');
+  verdict.className = 'verdict ' + (healthy ? 'well' : 'sick');
+
+  body.className = 'body' + (isError ? ' err' : '');
+  body.textContent = text;
+  panel.classList.add('on');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+</body>
+</html>
