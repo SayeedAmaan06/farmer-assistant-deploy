@@ -1,0 +1,32 @@
+# Pinned on purpose. "latest" is how a project that worked on Saturday
+# breaks on Sunday. The TensorFlow version must match the one that saved
+# the .keras file in Colab -- check with tf.__version__ there.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+python-dotenv==1.0.1
+
+tensorflow-cpu==2.18.0
+pillow==11.1.0
+numpy==1.26.4
+
+# The whole LangChain family is pinned together, transitive packages included.
+# Pinning only some of them is what breaks this project: langgraph ships its
+# own copy of the serialiser and calls into langchain-core, so a mismatched
+# pair fails at import with "Reviver.__init__() got an unexpected keyword
+# argument 'allowed_objects'". If you bump one line here, bump them all and
+# run the app once before you push.
+langchain==1.4.0
+langchain-classic==1.0.8
+langchain-community==0.4.2
+langchain-core==1.6.3
+langchain-google-genai==4.4.0
+langchain-protocol==0.0.19
+langchain-text-splitters==1.1.2
+langgraph==1.2.11
+langgraph-checkpoint==4.2.0
+langgraph-prebuilt==1.1.0
+langgraph-sdk==0.4.4
+
+faiss-cpu==1.9.0

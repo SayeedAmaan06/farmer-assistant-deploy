@@ -1,0 +1,32 @@
+# Render Blueprint. Point Render at this repo and it creates the service
+# described here, instead of you clicking through the dashboard.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: farmer-assistant
+    runtime: docker            # build from the Dockerfile in this repo
+    dockerfilePath: ./Dockerfile
+    region: oregon             # ohio | virginia | frankfurt | singapore
+    branch: main
+    plan: standard             # 2 GB RAM. See the note below -- this matters.
+    healthCheckPath: /health
+    autoDeploy: true           # every push to `branch` redeploys
+
+    # plan: standard is not an upsell, it is a measured requirement.
+    # This service idles at ~775 MB RSS: TensorFlow alone is ~500 MB before
+    # the model is even loaded, then Keras, FAISS and FastAPI on top.
+    #   free     512 MB -> OOM during startup
+    #   starter  512 MB -> OOM during startup
+    #   standard   2 GB -> fits, with room for request spikes
+    # If you must run this on 512 MB, the model has to leave TensorFlow
+    # behind (convert to TFLite/ONNX); see DEPLOY.md.
+
+    envVars:
+      # sync: false means "ask me for this value, never store it in git".
+      # Render prompts for it when you create the Blueprint.
+      - key: GOOGLE_API_KEY
+        sync: false
+      # Keep the container's port and the Dockerfile's EXPOSE in agreement.
+      - key: PORT
+        value: 7860
